@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+<title>備品管理台帳</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  input:focus { outline: none; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useMemo, useEffect } = React;
+
+const CATEGORIES = ["空調", "冷蔵庫", "洗濯機", "電子レンジ", "テレビ", "照明", "家具", "その他"];
+const STORAGE_KEY = "asset-tracker-items-v1";
+
+const emptyForm = {
+  itemName: "",
+  model: "",
+  year: "",
+  quantity: "1",
+  unitPrice: "",
+  location: "",
+  note: "",
+};
+
+function formatYen(n) {
+  if (n === "" || n === null || n === undefined || isNaN(n)) return "";
+  return "¥" + Number(n).toLocaleString("ja-JP");
+}
+
+function loadItems() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function Icon({ name, size = 16, color = "currentColor", strokeWidth = 2 }) {
+  const common = { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth, strokeLinecap: "round", strokeLinejoin: "round" };
+  if (name === "plus") {
+    return React.createElement("svg", common, React.createElement("path", { d: "M12 5v14M5 12h14" }));
+  }
+  if (name === "download") {
+    return React.createElement("svg", common,
+      React.createElement("path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }),
+      React.createElement("polyline", { points: "7 10 12 15 17 10" }),
+      React.createElement("line", { x1: "12", y1: "15", x2: "12", y2: "3" })
+    );
+  }
+  if (name === "trash") {
+    return React.createElement("svg", common,
+      React.createElement("polyline", { points: "3 6 5 6 21 6" }),
+      React.createElement("path", { d: "M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" }),
+      React.createElement("path", { d: "M10 11v6M14 11v6" }),
+      React.createElement("path", { d: "M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" })
+    );
+  }
+  if (name === "package") {
+    return React.createElement("svg", common,
+      React.createElement("path", { d: "M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" }),
+      React.createElement("path", { d: "M3.3 7 12 12l8.7-5M12 22V12" })
+    );
+  }
+  return null;
+}
+
+function AssetTracker() {
+  const [items, setItems] = useState(loadItems);
+  const [form, setForm] = useState(emptyForm);
+  const [errors, setErrors] = useState({});
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  }, [items]);
+
+  const total = useMemo(
+    () => items.reduce((sum, i) => sum + Number(i.quantity) * Number(i.unitPrice || 0), 0),
+    [items]
+  );
+
+  function updateField(key, value) {
+    setForm((f) => ({ ...f, [key]: value }));
+    if (errors[key]) setErrors((e) => ({ ...e, [key]: null }));
+  }
+
+  function validate() {
+    const e = {};
+    if (!form.itemName.trim()) e.itemName = "品目を入力してください";
+    if (!form.model.trim()) e.model = "型番を入力してください";
+    if (form.year && (Number(form.year) < 1980 || Number(form.year) > new Date().getFullYear())) {
+      e.year = "製造年が正しくありません";
+    }
+    if (!form.quantity || Number(form.quantity) < 1) e.quantity = "1以上の数値を入力してください";
+    if (form.unitPrice && Number(form.unitPrice) < 0) e.unitPrice = "0以上の数値を入力してください";
+    if (!form.location.trim()) e.location = "設置場所を入力してください";
+    return e;
+  }
+
+  function handleAdd() {
+    const e = validate();
+    if (Object.keys(e).length > 0) {
+      setErrors(e);
+      return;
+    }
+    setItems((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        ...form,
+        quantity: Number(form.quantity),
+        unitPrice: form.unitPrice === "" ? "" : Number(form.unitPrice),
+      },
+    ]);
+    setForm(emptyForm);
+    setErrors({});
+  }
+
+  function handleRemove(id) {
+    setItems((prev) => prev.filter((i) => i.id !== id));
+  }
+
+  function handleExport() {
+    if (items.length === 0) return;
+    const rows = items.map((i, idx) => ({
+      No: idx + 1,
+      品目: i.itemName,
+      型番: i.model,
+      製造年: i.year || "",
+      台数: i.quantity,
+      取得単価: i.unitPrice === "" ? "" : i.unitPrice,
+      金額: i.unitPrice === "" ? "" : i.quantity * i.unitPrice,
+      設置場所: i.location,
+      備考: i.note,
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"] = [
+      { wch: 5 }, { wch: 16 }, { wch: 18 }, { wch: 8 }, { wch: 6 },
+      { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 22 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "備品一覧");
+    const today = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `備品管理表_${today}.xlsx`);
+  }
+
+  const fields = [
+    { key: "itemName", label: "品目", placeholder: "例）エアコン", list: "category-list", inputMode: "text" },
+    { key: "model", label: "型番", placeholder: "例）S22ZTES-W", inputMode: "text" },
+    { key: "year", label: "製造年", placeholder: "例）2023", inputMode: "numeric" },
+    { key: "quantity", label: "台数", placeholder: "1", inputMode: "numeric" },
+    { key: "unitPrice", label: "取得単価（円）", placeholder: "例）68000", inputMode: "numeric" },
+    { key: "location", label: "設置場所", placeholder: "例）第一寮 101号室", inputMode: "text" },
+  ];
+
+  const inputStyle = (hasError) => ({
+    width: "100%",
+    boxSizing: "border-box",
+    padding: "13px 14px",
+    borderRadius: 9,
+    border: hasError ? "1.5px solid #C1443B" : "1.5px solid #DADFE6",
+    fontSize: 16,
+    fontFamily: "inherit",
+    outline: "none",
+    background: "#FBFCFD",
+  });
+
+  const labelStyle = { display: "block", fontSize: 12.5, fontWeight: 600, color: "#5B6472", marginBottom: 6 };
+  const cardStyle = { background: "#FFFFFF", borderRadius: 12, boxShadow: "0 1px 2px rgba(30,37,50,0.06), 0 1px 8px rgba(30,37,50,0.04)" };
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#F1F3F6", fontFamily: "'IBM Plex Sans JP', 'Hiragino Sans', sans-serif", color: "#1E2532", padding: "16px 12px 40px" }}>
+      <div style={{ maxWidth: 520, margin: "0 auto" }}>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: "#2B3A67", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Icon name="package" size={17} color="#F1F3F6" />
+          </div>
+          <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0, letterSpacing: "0.01em" }}>備品管理台帳</h1>
+        </div>
+        <p style={{ color: "#5B6472", fontSize: 12.5, margin: "0 0 18px 42px", lineHeight: 1.5 }}>
+          入力した備品はこの端末に保存されます。まとめてExcelに出力できます。
+        </p>
+
+        <div style={{ ...cardStyle, padding: "18px 16px 16px", marginBottom: 18 }}>
+          <datalist id="category-list">
+            {CATEGORIES.map((c) => <option value={c} key={c} />)}
+          </datalist>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {fields.map((f) => (
+              <div key={f.key}>
+                <label style={labelStyle}>
+                  {f.label}
+                  {(f.key === "itemName" || f.key === "model" || f.key === "location") &&
+                    <span style={{ color: "#C1443B" }}> *</span>}
+                </label>
+                <input
+                  type="text"
+                  inputMode={f.inputMode}
+                  value={form[f.key]}
+                  placeholder={f.placeholder}
+                  list={f.list}
+                  onChange={(e) => updateField(f.key, e.target.value)}
+                  style={inputStyle(!!errors[f.key])}
+                  onFocus={(e) => (e.target.style.borderColor = "#2B3A67")}
+                  onBlur={(e) => { if (!errors[f.key]) e.target.style.borderColor = "#DADFE6"; }}
+                />
+                {errors[f.key] && <div style={{ color: "#C1443B", fontSize: 11.5, marginTop: 4 }}>{errors[f.key]}</div>}
+              </div>
+            ))}
+            <div>
+              <label style={labelStyle}>備考</label>
+              <input
+                type="text"
+                value={form.note}
+                placeholder="例）2024年11月に修理済み"
+                onChange={(e) => updateField("note", e.target.value)}
+                style={inputStyle(false)}
+                onFocus={(e) => (e.target.style.borderColor = "#2B3A67")}
+                onBlur={(e) => (e.target.style.borderColor = "#DADFE6")}
+              />
+            </div>
+          </div>
+
+          <button
+            onClick={handleAdd}
+            style={{ marginTop: 18, width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, background: "#2B3A67", color: "#F1F3F6", border: "none", borderRadius: 10, padding: "14px 18px", fontSize: 15, fontWeight: 600, cursor: "pointer" }}
+          >
+            <Icon name="plus" size={17} strokeWidth={2.5} />
+            一覧に追加
+          </button>
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, padding: "0 2px" }}>
+          <div style={{ fontSize: 14, fontWeight: 700 }}>
+            登録済み一覧
+            <span style={{ color: "#8A93A1", fontWeight: 500, marginLeft: 8, fontSize: 13 }}>{items.length}件</span>
+          </div>
+        </div>
+
+        {items.length === 0 ? (
+          <div style={{ ...cardStyle, padding: "36px 20px", textAlign: "center", color: "#9AA1AC", fontSize: 13.5 }}>
+            まだ登録された備品はありません。上のフォームから追加してください。
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {items.map((i) => (
+              <div key={i.id} style={{ ...cardStyle, padding: "14px 16px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 700 }}>{i.itemName}</div>
+                    <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12.5, color: "#5B6472", marginTop: 2 }}>
+                      {i.model}
+                      {i.year && <span style={{ color: "#9AA1AC" }}> ・ {i.year}年</span>}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleRemove(i.id)}
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "#C1443B", padding: 6, marginRight: -6, marginTop: -4, display: "inline-flex" }}
+                    aria-label="削除"
+                  >
+                    <Icon name="trash" size={17} />
+                  </button>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 10, padding: "10px 0", borderTop: "1px solid #F0F1F3", borderBottom: "1px solid #F0F1F3" }}>
+                  <div>
+                    <div style={{ fontSize: 11, color: "#9AA1AC" }}>台数</div>
+                    <div style={{ fontSize: 13.5, fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600 }}>{i.quantity}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, color: "#9AA1AC" }}>単価</div>
+                    <div style={{ fontSize: 13.5, fontFamily: "'IBM Plex Mono', monospace" }}>{formatYen(i.unitPrice) || "—"}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, color: "#9AA1AC" }}>金額</div>
+                    <div style={{ fontSize: 13.5, fontFamily: "'IBM Plex Mono', monospace", fontWeight: 700 }}>
+                      {i.unitPrice === "" ? "—" : formatYen(i.quantity * i.unitPrice)}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 10, fontSize: 13 }}>
+                  <span style={{ color: "#9AA1AC" }}>設置場所　</span>{i.location}
+                </div>
+                {i.note && (
+                  <div style={{ marginTop: 4, fontSize: 12.5, color: "#8A93A1" }}>
+                    <span style={{ color: "#9AA1AC" }}>備考　</span>{i.note}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            <div style={{ ...cardStyle, padding: "12px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#5B6472" }}>合計金額</span>
+              <span style={{ fontSize: 16, fontWeight: 700, fontFamily: "'IBM Plex Mono', monospace" }}>{formatYen(total)}</span>
+            </div>
+          </div>
+        )}
+
+        <div style={{ position: "sticky", bottom: 12, marginTop: 18 }}>
+          <button
+            onClick={handleExport}
+            disabled={items.length === 0}
+            style={{
+              width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              background: items.length === 0 ? "#C9CDD3" : "#3F7D5C", color: "#FFFFFF", border: "none",
+              borderRadius: 12, padding: "15px 18px", fontSize: 15.5, fontWeight: 700,
+              cursor: items.length === 0 ? "not-allowed" : "pointer",
+              boxShadow: items.length === 0 ? "none" : "0 4px 14px rgba(63,125,92,0.35)",
+            }}
+          >
+            <Icon name="download" size={18} strokeWidth={2.5} />
+            {`Excelに出力（${items.length}件）`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<AssetTracker />);
+</script>
+</body>
+</html>
