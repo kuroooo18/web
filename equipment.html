@@ -23,6 +23,12 @@
 const { useState, useMemo, useEffect } = React;
 
 const CATEGORIES = ["エアコン", "冷蔵庫", "洗濯機", "炊飯器", "電子レンジ", "照明器具", "調理器具"];
+const LOCATIONS = [
+  "社_101", "社_102", "社_103", "社_104", "社_105", "社_共有部",
+  "中関_1-101", "中関_1-201", "中関1_203", "中関_1-204", "中関_1-402", "中関_1-404",
+  "中関_2-104", "中関_2-201", "中関_2-202", "中関_2-204", "中関_2-301", "中関_2-404",
+  "アーバン_102", "ハイカムール_202", "ニューライフ_201",
+];
 const STORAGE_KEY = "asset-tracker-items-v1";
 
 const emptyForm = {
@@ -75,6 +81,15 @@ function Icon({ name, size = 16, color = "currentColor", strokeWidth = 2 }) {
       React.createElement("path", { d: "M3.3 7 12 12l8.7-5M12 22V12" })
     );
   }
+  if (name === "check") {
+    return React.createElement("svg", common, React.createElement("polyline", { points: "20 6 9 17 4 12" }));
+  }
+  if (name === "edit") {
+    return React.createElement("svg", common,
+      React.createElement("path", { d: "M12 20h9" }),
+      React.createElement("path", { d: "M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" })
+    );
+  }
   return null;
 }
 
@@ -82,6 +97,7 @@ function AssetTracker() {
   const [items, setItems] = useState(loadItems);
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState({});
+  const [editingId, setEditingId] = useState(null);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
@@ -113,21 +129,45 @@ function AssetTracker() {
       setErrors(e);
       return;
     }
-    setItems((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        ...form,
-        quantity: form.quantity === "" ? "" : Number(form.quantity),
-        unitPrice: form.unitPrice === "" ? "" : Number(form.unitPrice),
-      },
-    ]);
+    const normalized = {
+      ...form,
+      quantity: form.quantity === "" ? "" : Number(form.quantity),
+      unitPrice: form.unitPrice === "" ? "" : Number(form.unitPrice),
+    };
+    if (editingId !== null) {
+      setItems((prev) => prev.map((i) => (i.id === editingId ? { id: editingId, ...normalized } : i)));
+      setEditingId(null);
+    } else {
+      setItems((prev) => [...prev, { id: Date.now(), ...normalized }]);
+    }
     setForm(emptyForm);
+    setErrors({});
+  }
+
+  function handleEdit(item) {
+    setForm({
+      itemName: item.itemName,
+      model: item.model,
+      year: item.year,
+      quantity: item.quantity === "" ? "" : String(item.quantity),
+      unitPrice: item.unitPrice === "" ? "" : String(item.unitPrice),
+      location: item.location,
+      note: item.note,
+    });
+    setEditingId(item.id);
+    setErrors({});
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function handleCancelEdit() {
+    setForm(emptyForm);
+    setEditingId(null);
     setErrors({});
   }
 
   function handleRemove(id) {
     setItems((prev) => prev.filter((i) => i.id !== id));
+    if (editingId === id) handleCancelEdit();
   }
 
   function handleExport() {
@@ -159,7 +199,6 @@ function AssetTracker() {
     { key: "year", label: "製造年", placeholder: "例）2023", inputMode: "numeric" },
     { key: "quantity", label: "台数", placeholder: "1", inputMode: "numeric" },
     { key: "unitPrice", label: "取得単価（円）", placeholder: "例）68000", inputMode: "numeric" },
-    { key: "location", label: "設置場所", placeholder: "例）第一寮 101号室", inputMode: "text" },
   ];
 
   const inputStyle = (hasError) => ({
@@ -188,10 +227,21 @@ function AssetTracker() {
           <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0, letterSpacing: "0.01em" }}>備品管理台帳</h1>
         </div>
         <p style={{ color: "#5B6472", fontSize: 12.5, margin: "0 0 18px 42px", lineHeight: 1.5 }}>
-          入力した備品はこの端末に保存されます。まとめてExcelに出力できます。
+          入力した備品はこの端末に保存されます。まとめてExcelに出力できます。登録済みの項目はタップすると修正できます。
         </p>
 
-        <div style={{ ...cardStyle, padding: "18px 16px 16px", marginBottom: 18 }}>
+        <div style={{ ...cardStyle, padding: "18px 16px 16px", marginBottom: 18, border: editingId !== null ? "1.5px solid #2B3A67" : "none" }}>
+          {editingId !== null && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#2B3A67" }}>登録済み項目を編集中</span>
+              <button
+                onClick={handleCancelEdit}
+                style={{ background: "none", border: "none", color: "#5B6472", fontSize: 12.5, fontWeight: 600, cursor: "pointer", padding: "4px 6px" }}
+              >
+                キャンセル
+              </button>
+            </div>
+          )}
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div>
               <label style={labelStyle}>品目</label>
@@ -223,6 +273,31 @@ function AssetTracker() {
               </div>
             ))}
             <div>
+              <label style={labelStyle}>設置場所（リストから選択）</label>
+              <select
+                value={LOCATIONS.includes(form.location) ? form.location : ""}
+                onChange={(e) => updateField("location", e.target.value)}
+                style={{ ...inputStyle(false), appearance: "none", WebkitAppearance: "none", background: "#FBFCFD url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235B6472' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>\") no-repeat right 12px center", backgroundSize: "18px" }}
+                onFocus={(e) => (e.target.style.borderColor = "#2B3A67")}
+                onBlur={(e) => (e.target.style.borderColor = "#DADFE6")}
+              >
+                <option value="">選択してください</option>
+                {LOCATIONS.map((l) => <option value={l} key={l}>{l}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={labelStyle}>設置場所（自由入力・リストにない場合はこちら）</label>
+              <input
+                type="text"
+                value={form.location}
+                placeholder="例）第一寮 101号室"
+                onChange={(e) => updateField("location", e.target.value)}
+                style={inputStyle(false)}
+                onFocus={(e) => (e.target.style.borderColor = "#2B3A67")}
+                onBlur={(e) => (e.target.style.borderColor = "#DADFE6")}
+              />
+            </div>
+            <div>
               <label style={labelStyle}>備考</label>
               <input
                 type="text"
@@ -236,13 +311,23 @@ function AssetTracker() {
             </div>
           </div>
 
-          <button
-            onClick={handleAdd}
-            style={{ marginTop: 18, width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, background: "#2B3A67", color: "#F1F3F6", border: "none", borderRadius: 10, padding: "14px 18px", fontSize: 15, fontWeight: 600, cursor: "pointer" }}
-          >
-            <Icon name="plus" size={17} strokeWidth={2.5} />
-            一覧に追加
-          </button>
+          <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+            {editingId !== null && (
+              <button
+                onClick={handleCancelEdit}
+                style={{ flex: "0 0 auto", background: "#FFFFFF", color: "#5B6472", border: "1.5px solid #DADFE6", borderRadius: 10, padding: "14px 18px", fontSize: 15, fontWeight: 600, cursor: "pointer" }}
+              >
+                取消
+              </button>
+            )}
+            <button
+              onClick={handleAdd}
+              style={{ flex: "1 1 auto", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, background: "#2B3A67", color: "#F1F3F6", border: "none", borderRadius: 10, padding: "14px 18px", fontSize: 15, fontWeight: 600, cursor: "pointer" }}
+            >
+              <Icon name={editingId !== null ? "check" : "plus"} size={17} strokeWidth={2.5} />
+              {editingId !== null ? "変更を保存" : "一覧に追加"}
+            </button>
+          </div>
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, padding: "0 2px" }}>
@@ -259,7 +344,11 @@ function AssetTracker() {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {items.map((i) => (
-              <div key={i.id} style={{ ...cardStyle, padding: "14px 16px" }}>
+              <div
+                key={i.id}
+                onClick={() => handleEdit(i)}
+                style={{ ...cardStyle, padding: "14px 16px", cursor: "pointer", border: editingId === i.id ? "1.5px solid #2B3A67" : "1.5px solid transparent" }}
+              >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div>
                     <div style={{ fontSize: 15, fontWeight: 700 }}>{i.itemName || "（品目未選択）"}</div>
@@ -268,13 +357,18 @@ function AssetTracker() {
                       {i.year && <span style={{ color: "#9AA1AC" }}> ・ {i.year}年</span>}
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleRemove(i.id)}
-                    style={{ background: "none", border: "none", cursor: "pointer", color: "#C1443B", padding: 6, marginRight: -6, marginTop: -4, display: "inline-flex" }}
-                    aria-label="削除"
-                  >
-                    <Icon name="trash" size={17} />
-                  </button>
+                  <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+                    <span style={{ color: "#9AA1AC", padding: 6, display: "inline-flex" }}>
+                      <Icon name="edit" size={15} />
+                    </span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleRemove(i.id); }}
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "#C1443B", padding: 6, marginRight: -6, marginTop: -4, display: "inline-flex" }}
+                      aria-label="削除"
+                    >
+                      <Icon name="trash" size={17} />
+                    </button>
+                  </div>
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 10, padding: "10px 0", borderTop: "1px solid #F0F1F3", borderBottom: "1px solid #F0F1F3" }}>
