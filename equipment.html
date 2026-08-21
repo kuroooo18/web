@@ -22,7 +22,7 @@
 <script type="text/babel" data-presets="react">
 const { useState, useMemo, useEffect } = React;
 
-const CATEGORIES = ["空調", "冷蔵庫", "洗濯機", "電子レンジ", "テレビ", "照明", "家具", "その他"];
+const CATEGORIES = ["エアコン", "冷蔵庫", "洗濯機", "炊飯器", "電子レンジ", "照明器具", "調理器具"];
 const STORAGE_KEY = "asset-tracker-items-v1";
 
 const emptyForm = {
@@ -88,7 +88,7 @@ function AssetTracker() {
   }, [items]);
 
   const total = useMemo(
-    () => items.reduce((sum, i) => sum + Number(i.quantity) * Number(i.unitPrice || 0), 0),
+    () => items.reduce((sum, i) => sum + Number(i.quantity || 0) * Number(i.unitPrice || 0), 0),
     [items]
   );
 
@@ -99,14 +99,11 @@ function AssetTracker() {
 
   function validate() {
     const e = {};
-    if (!form.itemName.trim()) e.itemName = "品目を入力してください";
-    if (!form.model.trim()) e.model = "型番を入力してください";
     if (form.year && (Number(form.year) < 1980 || Number(form.year) > new Date().getFullYear())) {
       e.year = "製造年が正しくありません";
     }
-    if (!form.quantity || Number(form.quantity) < 1) e.quantity = "1以上の数値を入力してください";
+    if (form.quantity && Number(form.quantity) < 1) e.quantity = "1以上の数値を入力してください";
     if (form.unitPrice && Number(form.unitPrice) < 0) e.unitPrice = "0以上の数値を入力してください";
-    if (!form.location.trim()) e.location = "設置場所を入力してください";
     return e;
   }
 
@@ -121,7 +118,7 @@ function AssetTracker() {
       {
         id: Date.now(),
         ...form,
-        quantity: Number(form.quantity),
+        quantity: form.quantity === "" ? "" : Number(form.quantity),
         unitPrice: form.unitPrice === "" ? "" : Number(form.unitPrice),
       },
     ]);
@@ -140,9 +137,9 @@ function AssetTracker() {
       品目: i.itemName,
       型番: i.model,
       製造年: i.year || "",
-      台数: i.quantity,
+      台数: i.quantity === "" ? "" : i.quantity,
       取得単価: i.unitPrice === "" ? "" : i.unitPrice,
-      金額: i.unitPrice === "" ? "" : i.quantity * i.unitPrice,
+      金額: (i.unitPrice === "" || i.quantity === "") ? "" : i.quantity * i.unitPrice,
       設置場所: i.location,
       備考: i.note,
     }));
@@ -158,7 +155,6 @@ function AssetTracker() {
   }
 
   const fields = [
-    { key: "itemName", label: "品目", placeholder: "例）エアコン", list: "category-list", inputMode: "text" },
     { key: "model", label: "型番", placeholder: "例）S22ZTES-W", inputMode: "text" },
     { key: "year", label: "製造年", placeholder: "例）2023", inputMode: "numeric" },
     { key: "quantity", label: "台数", placeholder: "1", inputMode: "numeric" },
@@ -196,23 +192,28 @@ function AssetTracker() {
         </p>
 
         <div style={{ ...cardStyle, padding: "18px 16px 16px", marginBottom: 18 }}>
-          <datalist id="category-list">
-            {CATEGORIES.map((c) => <option value={c} key={c} />)}
-          </datalist>
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div>
+              <label style={labelStyle}>品目</label>
+              <select
+                value={form.itemName}
+                onChange={(e) => updateField("itemName", e.target.value)}
+                style={{ ...inputStyle(false), appearance: "none", WebkitAppearance: "none", background: "#FBFCFD url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235B6472' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>\") no-repeat right 12px center", backgroundSize: "18px" }}
+                onFocus={(e) => (e.target.style.borderColor = "#2B3A67")}
+                onBlur={(e) => (e.target.style.borderColor = "#DADFE6")}
+              >
+                <option value="">選択してください</option>
+                {CATEGORIES.map((c) => <option value={c} key={c}>{c}</option>)}
+              </select>
+            </div>
             {fields.map((f) => (
               <div key={f.key}>
-                <label style={labelStyle}>
-                  {f.label}
-                  {(f.key === "itemName" || f.key === "model" || f.key === "location") &&
-                    <span style={{ color: "#C1443B" }}> *</span>}
-                </label>
+                <label style={labelStyle}>{f.label}</label>
                 <input
                   type="text"
                   inputMode={f.inputMode}
                   value={form[f.key]}
                   placeholder={f.placeholder}
-                  list={f.list}
                   onChange={(e) => updateField(f.key, e.target.value)}
                   style={inputStyle(!!errors[f.key])}
                   onFocus={(e) => (e.target.style.borderColor = "#2B3A67")}
@@ -261,7 +262,7 @@ function AssetTracker() {
               <div key={i.id} style={{ ...cardStyle, padding: "14px 16px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                   <div>
-                    <div style={{ fontSize: 15, fontWeight: 700 }}>{i.itemName}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700 }}>{i.itemName || "（品目未選択）"}</div>
                     <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12.5, color: "#5B6472", marginTop: 2 }}>
                       {i.model}
                       {i.year && <span style={{ color: "#9AA1AC" }}> ・ {i.year}年</span>}
@@ -279,7 +280,7 @@ function AssetTracker() {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 10, padding: "10px 0", borderTop: "1px solid #F0F1F3", borderBottom: "1px solid #F0F1F3" }}>
                   <div>
                     <div style={{ fontSize: 11, color: "#9AA1AC" }}>台数</div>
-                    <div style={{ fontSize: 13.5, fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600 }}>{i.quantity}</div>
+                    <div style={{ fontSize: 13.5, fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600 }}>{i.quantity === "" ? "—" : i.quantity}</div>
                   </div>
                   <div>
                     <div style={{ fontSize: 11, color: "#9AA1AC" }}>単価</div>
@@ -288,13 +289,13 @@ function AssetTracker() {
                   <div>
                     <div style={{ fontSize: 11, color: "#9AA1AC" }}>金額</div>
                     <div style={{ fontSize: 13.5, fontFamily: "'IBM Plex Mono', monospace", fontWeight: 700 }}>
-                      {i.unitPrice === "" ? "—" : formatYen(i.quantity * i.unitPrice)}
+                      {(i.unitPrice === "" || i.quantity === "") ? "—" : formatYen(i.quantity * i.unitPrice)}
                     </div>
                   </div>
                 </div>
 
                 <div style={{ marginTop: 10, fontSize: 13 }}>
-                  <span style={{ color: "#9AA1AC" }}>設置場所　</span>{i.location}
+                  <span style={{ color: "#9AA1AC" }}>設置場所　</span>{i.location || "—"}
                 </div>
                 {i.note && (
                   <div style={{ marginTop: 4, fontSize: 12.5, color: "#8A93A1" }}>
