@@ -173,7 +173,9 @@ function AssetTracker() {
     setErrors({});
   }
 
-  function handleRemove(id) {
+  function handleRemove(id, itemName) {
+    const label = itemName ? `「${itemName}」` : "この項目";
+    if (!window.confirm(`${label}を削除します。よろしいですか？`)) return;
     setItems((prev) => prev.filter((i) => i.id !== id));
     if (editingId === id) handleCancelEdit();
   }
@@ -373,7 +375,7 @@ function AssetTracker() {
                       <Icon name="edit" size={15} />
                     </span>
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleRemove(i.id); }}
+                      onClick={(e) => { e.stopPropagation(); handleRemove(i.id, i.itemName); }}
                       style={{ background: "none", border: "none", cursor: "pointer", color: "#C1443B", padding: 6, marginRight: -6, marginTop: -4, display: "inline-flex" }}
                       aria-label="削除"
                     >
