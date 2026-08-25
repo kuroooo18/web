@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-<title>備品管理台帳</title>
+<title>BiHub</title>
 <link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAADqElEQVR4nO2WW2wUVRjHz3fO7Nz2Om0hQqpS8YHQpIkhNVokVttqW2sxNTSF6NYahJZEiZdIYkI0SrUG1NQHDBpMvRbo1rCYlkIxbW3xwao1jYkJCZcQggS6s92dnb3M7DnHhyU8wHS7Ekk04f86Z/6/+f7nfOcbKK/aim6l8C11vw34TwCEwpcCAAAghDjnnPN/GUAItm2aTKY5QoosypKYpbSQFxePiBCMEIroBmPsjVfbenu6VFWe02Oc89yjmwcQggFAjxqUsa3PNR4d2FW+6m5FFsNfv9nZ8QQARPT4tS9YSODYyYAQZdw0U7IiNdZVvhCsT6WtfX3DJ8Z/y1jZ6rUVr2xrCfjdB76b+CY0lkikPG6FYHDcFgdAzt3tlqvuX93SVBXwe74NjR06/CNn3OdTASBuJAGgvmbNM601lLJQePKn6T9NM+3IcAAQgvWosaW9cedrG9OWHezcPTw6fVfpElmWLMtGCIkuIWPZ5y9cWfvA6lDfTo8qvbOn/9Mvhos0L6XsOjfnU8QYK9K8o+Mz0zOn9n/88tjU7HsfHTx/4bIW8GAMVyKxJcX+Tz54saWpau/nQxXlZcWal7HrrXNy3h/OEQAYZurdDw+0be7x+9Shg29v73yKMWYm0+0b60ZC3feWLWvftuetnq8SZgoBLNQY+fpAEEix5j199mKwa3dDbeWO7a2PP7omlbZW3Ln0/d5Dg0emRFEo1ryCQPKYLHKQKWOKIvp9npEffq1+8nV9PiFLrkeadwyEJ30+1e1WsjeEXmgFnPNMxqaUAwBjtEjzXPxLP3vu0mnOItF46fISy8oKwtVleW6OBSsQBLKybJkoChE9DgCcI0KwJLkUWXIJQq6N9aiBMb5nxR15UnIAcM5VRZo4OSsQPBLqbm54MJnKGIkkxpBbQDBOmGk9ajTUVh4b7JYlceLkrKpIjnU4RMQYVxTpl5lTLcFdG9ave2nL+o5Nj/XuOxwKT1q2DQCX5+afbn6o6/mm0uUln315dPDIFGVMUSTGHADOVwVCCANwhOZjCVWVOzbVPdta8/sfZ1wuIZOx44ZZ+/B9/YPjff2jc5GYFvACIEf3fICraRBMKZuPmUtL/JuD9e1tdaIoDIQn9+7//sy5S4GAxyWQG7v3HwCuYWw7G9GN6nUVbkUeOv6zFvDIkkgZXXTwFARACAEAwThhphjnXo/CWKFDrdCJxjnPUqqqEkKQP5ObBOTEGEeo0Gmc0///t+U2YFH9DW7DnLNmCuPMAAAAAElFTkSuQmCC">
 <link rel="apple-touch-icon" sizes="180x180" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAIAAACyr5FlAAAESUlEQVR4nO3dzXGjQBRF4fbUZDMZKAGHMmtF4nicgOOaxZuiuhAXNQLB+znfygtbRnD0GskS/vhz+9uAJb+u3gD4RRyQiAMScUAiDkjEAYk4IBEHJOKARByQiAMScUAiDkjEAYk4IBEHJOKARByQiAMScUAiDkjEAYk4IBEHJOKARByQiAMScUAiDkjEAYk4IBEHJOKARByQiAMScUAiDkjEAYk4IBEHJOKARByQiAMScUAiDki/r94AR36+v+yL2+f92i1xgsnx31TG7OvKiKO1pRroo7X2Ufyf8TyNoPISUzeOTbOhZiIV43h5yaiWSK049p9JlOqjShyDWdw+7yPfWSSR/HGMZ7H1p9InkjmO17LYeguJE8kZx/4stt5aykQSxvGmY1kwkVRxvPv4HTuQ/EsSx5kP6zqJhI/jqmlfIZHAcXg4CcidSMg4PGTR87Y9RwkWh+dHar5EwsThOYtepkQCxBEli16ORJzGkePNFuP3wudd8BhH9H06E3HyGXdxxN2VK4LeqZBvMPa2E58Kt8Em5OdW7IEYZY/HfSN7yMlhfr6//O93/1u4InAcxu3eD9HuupDLyoy3VSZ6E5MAk+P2eR858E4eqYMvf/lJeUWYyWF78+muv3CK5HhVtBdgcvTGp8gJG9P/unxltHBxGFerTKZ1ZCbMsjLjYZVJOS16ISfH5KpVJus6MhN1cvRGpshRIyToX0leE3ty9E44EUl8erEow+SYvO9EpMIi8ijP5JgceyJS5PRiUcI4zCGrTLV1ZCbVsjKzZ5UpOy16meMwWxMp9XxkXf44zKZERm6qgrTnHIt2HtfEpxeLasXRdhzgUlmYKsvKzOAq039zQUXjME8TKZuFKbesPFIFFC+jEYdCGY04sII4IBEHJOKARByQiAMScUAiDkjEAYk4IBEHpABxeLiwwuFC3KkYf7L3dnmWPUJkYQJMjomTy7PsEWv7I8VhYu3fScSy3cXh6tobh4j7mTl3cbQt/7TReSLjW+iwjOb2hLTfWedcW+FYQUfFjMfJMTPyYQJXUyRHGc3t5Hg08kHFy6dImixMmDiaj+uArf/SdYGyMJHiMOOJnHMwUmZh4sVhzrwO2PrtrwuahYkah7kqkdBPUMfFjsOcnEj6gTHJEIc5IZE6WZg8cZg3PeOtloXJFkc7+hlvzSxMwjjM/me8lbMw7v516Du86ZX13GW0InGYAxNJn4UpFIfZmUiRLEy5OMwLiZTKwhSNo23po2AWpm4c5mkiZctoxGEWE6mchQnwTrBLUEZjcvSm+UEZhjggsaxAIg5IxAGJOCARByTigEQckIgDEnFAIg5IxAGJOCARByTigEQckIgDEnFAIg5IxAGJOCARByTigEQckIgDEnFAIg5IxAGJOCARByTigEQckIgDEnFAIg5IxAGJOCARByTigEQckIgDEnFAIg5IxAGJOCARByTigEQckP4BRnrj/sB8DAsAAAAASUVORK5CYII=">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="備品管理台帳">
+<meta name="apple-mobile-web-app-title" content="BiHub">
 <meta name="theme-color" content="#2B3A67">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
@@ -234,7 +234,7 @@ function AssetTracker() {
           <div style={{ width: 32, height: 32, borderRadius: 8, background: "#2B3A67", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <Icon name="package" size={17} color="#F1F3F6" />
           </div>
-          <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0, letterSpacing: "0.01em" }}>備品管理台帳</h1>
+          <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0, letterSpacing: "0.01em" }}>BiHub</h1>
         </div>
         <p style={{ color: "#5B6472", fontSize: 12.5, margin: "0 0 18px 42px", lineHeight: 1.5 }}>
           入力した備品はこの端末に保存されます。まとめてExcelに出力できます。登録済みの項目はタップすると修正できます。
